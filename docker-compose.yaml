@@ -1,0 +1,56 @@
+version: "3.7"
+services:
+  client:
+    build:
+      context: "./client"
+      dockerfile: Dockerfile
+    depends_on:
+      - server
+    ports:
+      - "3001:3000"
+    environment:
+      SOCKET_URL: ws://127.0.0.1:9001
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: always
+    networks:
+      - game-network
+
+  server:
+    build:
+      context: "."
+      dockerfile: Dockerfile
+    # ports:
+    #   - "9001"
+    environment:
+      PORT: 9001
+      NODE_ENV: production
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - game-network
+    restart: always
+    links:
+      - redis
+    depends_on:
+      - redis
+
+  redis:
+    image: redis
+    container_name: game_cache
+    ports:
+      - "6379:6379"
+    command: bash -c "redis-server --appendonly yes"
+    volumes:
+      - ./data/redis:/data
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: always
+    networks:
+      - game-network
+
+networks:
+  game-network:
+    driver: bridge
